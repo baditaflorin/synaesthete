@@ -257,6 +257,83 @@ body,
   justify-content: space-between;
 }
 
+.controls button.record,
+.controls button.ghost {
+  appearance: none;
+  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.controls button.record .dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  flex-shrink: 0;
+}
+
+.controls button.record[aria-pressed='true'] {
+  background: rgba(255, 58, 138, 0.18);
+  border-color: rgba(255, 58, 138, 0.55);
+  color: #ffb8d4;
+}
+
+.controls button.record[aria-pressed='true'] .dot {
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.controls button.record[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.controls button kbd {
+  margin-left: auto;
+  font:
+    600 0.7rem ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--panel-border);
+  color: var(--muted);
+}
+
+.controls button.ghost {
+  justify-content: center;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: 0.7;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .controls button.record[aria-pressed='true'] .dot {
+    animation: none;
+  }
+}
+
 .hud-foot {
   display: flex;
   justify-content: space-between;

@@ -1,6 +1,7 @@
 import './styles.css';
 import { AudioFeatureExtractor, type AudioFeatures } from './audio/features';
 import { acquireMedia, stopStream, type MediaBundle } from './media/devices';
+import { CanvasRecorder } from './media/recorder';
 import { createRenderer, type EffectMode } from './render';
 import { loadPrefs, savePrefs, type Prefs } from './state/prefs';
 import { buildMeters, makeFpsCounter } from './ui/hud';
@@ -17,9 +18,13 @@ interface El {
   effectSelect: HTMLSelectElement;
   sensitivity: HTMLInputElement;
   mirror: HTMLInputElement;
+  recordBtn: HTMLButtonElement;
+  shareBtn: HTMLButtonElement;
   fps: HTMLElement;
   hint: HTMLElement;
 }
+
+const EFFECT_KEYS: readonly EffectMode[] = ['prism', 'ripple', 'bloom', 'kaleido', 'combo'];
 
 function getEl(): El {
   return {
@@ -34,6 +39,8 @@ function getEl(): El {
     effectSelect: must<HTMLSelectElement>('#effect-select'),
     sensitivity: must<HTMLInputElement>('#sensitivity'),
     mirror: must<HTMLInputElement>('#mirror'),
+    recordBtn: must<HTMLButtonElement>('#record-btn'),
+    shareBtn: must<HTMLButtonElement>('#share-btn'),
     fps: must<HTMLElement>('#fps'),
     hint: must<HTMLElement>('#hint'),
   };
@@ -65,7 +72,6 @@ async function start(el: El, prefs: Prefs): Promise<void> {
     return;
   }
 
-  // Need at least one of the two.
   if (!bundle.camera && !bundle.mic) {
     el.overlayHint.textContent =
       bundle.cameraError ?? bundle.micError ?? 'Camera and microphone unavailable.';
@@ -73,7 +79,6 @@ async function start(el: El, prefs: Prefs): Promise<void> {
     return;
   }
 
-  // Build video element off-DOM; it just feeds the texture upload.
   const video = document.createElement('video');
   video.muted = true;
   video.playsInline = true;
@@ -81,14 +86,13 @@ async function start(el: El, prefs: Prefs): Promise<void> {
   if (bundle.camera) {
     video.srcObject = bundle.camera;
   } else {
-    // No camera — paint a synthetic gradient frame via a 1×1 canvas-derived stream.
     video.srcObject = makeBlankStream();
   }
 
   try {
     await video.play();
   } catch {
-    // Some browsers reject autoplay without user gesture; the button click is the gesture.
+    /* the button click counts as the gesture; this should not happen */
   }
 
   const renderer = await createRenderer(el.canvas, video);
@@ -110,7 +114,6 @@ async function start(el: El, prefs: Prefs): Promise<void> {
     extractor = new AudioFeatureExtractor(audioCtx, source);
   }
 
-  // Silent baseline features when mic is unavailable — keeps the renderer alive.
   const silentFeatures: AudioFeatures = {
     loudness: 0,
     bass: 0,
@@ -138,25 +141,126 @@ async function start(el: El, prefs: Prefs): Promise<void> {
   let sensitivity = prefs.sensitivity;
   let mirror = prefs.mirror;
 
-  el.effectSelect.addEventListener('change', () => {
-    effect = el.effectSelect.value as EffectMode;
-    savePrefs({ effect, sensitivity, mirror });
-  });
-  el.sensitivity.addEventListener('input', () => {
-    sensitivity = Number(el.sensitivity.value);
-    savePrefs({ effect, sensitivity, mirror });
-  });
-  el.mirror.addEventListener('change', () => {
-    mirror = el.mirror.checked;
-    savePrefs({ effect, sensitivity, mirror });
+  const persist = (): void => savePrefs({ effect, sensitivity, mirror });
+
+  const setEffect = (next: EffectMode): void => {
+    if (next === effect) return;
+    effect = next;
+    el.effectSelect.value = next;
+    persist();
+  };
+  const setSensitivity = (next: number): void => {
+    const clamped = Math.min(3, Math.max(0.2, next));
+    if (clamped === sensitivity) return;
+    sensitivity = clamped;
+    el.sensitivity.value = String(clamped);
+    persist();
+  };
+  const setMirror = (next: boolean): void => {
+    if (next === mirror) return;
+    mirror = next;
+    el.mirror.checked = next;
+    persist();
+  };
+
+  el.effectSelect.addEventListener('change', () => setEffect(el.effectSelect.value as EffectMode));
+  el.sensitivity.addEventListener('input', () => setSensitivity(Number(el.sensitivity.value)));
+  el.mirror.addEventListener('change', () => setMirror(el.mirror.checked));
+
+  el.hudToggle.addEventListener('click', () => toggleHud(el));
+
+  // --- Recorder wiring ---
+  const micTrack = bundle.mic?.getAudioTracks()[0] ?? null;
+  const recorder = new CanvasRecorder({ canvas: el.canvas, micTrack });
+  if (!recorder.isAvailable) {
+    el.recordBtn.disabled = true;
+    el.recordBtn.title = 'Recording is not supported in this browser.';
+  }
+  const updateRecordLabel = (): void => {
+    const label = el.recordBtn.querySelector('.label');
+    if (recorder.state === 'recording') {
+      const secs = Math.floor(recorder.elapsedSeconds());
+      if (label)
+        label.textContent = `Stop ${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(
+          secs % 60,
+        ).padStart(2, '0')}`;
+      el.recordBtn.setAttribute('aria-pressed', 'true');
+    } else {
+      if (label) label.textContent = 'Record';
+      el.recordBtn.setAttribute('aria-pressed', 'false');
+    }
+  };
+  const toggleRecord = async (): Promise<void> => {
+    if (!recorder.isAvailable) return;
+    if (recorder.state === 'recording') {
+      const result = await recorder.stop();
+      updateRecordLabel();
+      if (result) {
+        const secs = Math.round(result.durationMs / 1000);
+        el.hint.textContent = `Saved ${result.filename} (${secs}s, ${formatBytes(result.bytes)})`;
+      }
+    } else {
+      recorder.start();
+      updateRecordLabel();
+      el.hint.textContent = '';
+    }
+  };
+  el.recordBtn.addEventListener('click', () => {
+    void toggleRecord();
   });
 
-  el.hudToggle.addEventListener('click', () => {
-    const collapsed = el.hud.classList.toggle('collapsed');
-    el.hudToggle.textContent = collapsed ? '+' : '−';
-    el.hudToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  // --- Share button ---
+  el.shareBtn.addEventListener('click', () => {
+    persist(); // make sure the hash is current
+    const url = location.href;
+    const fallback = (): void => {
+      el.hint.textContent = 'Copy from address bar — clipboard blocked.';
+    };
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(url).then(() => {
+        el.hint.textContent = 'Share link copied to clipboard.';
+      }, fallback);
+    } else {
+      fallback();
+    }
   });
 
+  // --- Keyboard shortcuts ---
+  window.addEventListener('keydown', (ev) => {
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    const target = ev.target as HTMLElement | null;
+    if (target && /^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName)) return;
+
+    const k = ev.key.toLowerCase();
+    if (k >= '1' && k <= '5') {
+      ev.preventDefault();
+      const idx = Number(k) - 1;
+      const next = EFFECT_KEYS[idx];
+      if (next) setEffect(next);
+      return;
+    }
+    if (k === 'h') {
+      ev.preventDefault();
+      toggleHud(el);
+      return;
+    }
+    if (k === 'm') {
+      ev.preventDefault();
+      setMirror(!mirror);
+      return;
+    }
+    if (k === 'r') {
+      ev.preventDefault();
+      void toggleRecord();
+      return;
+    }
+    if (k === '?') {
+      ev.preventDefault();
+      el.hint.textContent = '1-5 effect · H hud · M mirror · R record';
+    }
+  });
+
+  // --- Resize ---
   const resize = (): void => {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const w = Math.round(el.canvas.clientWidth * dpr);
@@ -165,8 +269,15 @@ async function start(el: El, prefs: Prefs): Promise<void> {
   };
   resize();
   window.addEventListener('resize', resize);
-  // Some browsers don't fire resize when the address bar collapses on mobile.
   window.addEventListener('orientationchange', resize);
+
+  // --- Cross-tab pref sync (other Synaesthete tabs share the URL hash). ---
+  window.addEventListener('hashchange', () => {
+    const next = loadPrefs();
+    setEffect(next.effect);
+    setSensitivity(next.sensitivity);
+    setMirror(next.mirror);
+  });
 
   const t0 = performance.now();
   function frame(): void {
@@ -179,18 +290,31 @@ async function start(el: El, prefs: Prefs): Promise<void> {
       time: (performance.now() - t0) * 0.001,
     });
     meters(features);
+    if (recorder.state === 'recording') updateRecordLabel();
     tickFps();
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
 
-  // Cleanup hook — page navigation will tear down anyway, but be tidy.
   window.addEventListener('pagehide', () => {
+    void recorder.stop().catch(() => undefined);
     renderer.destroy();
     if (audioCtx) audioCtx.close().catch(() => undefined);
     stopStream(bundle.camera);
     stopStream(bundle.mic);
   });
+}
+
+function toggleHud(el: El): void {
+  const collapsed = el.hud.classList.toggle('collapsed');
+  el.hudToggle.textContent = collapsed ? '+' : '−';
+  el.hudToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
 function makeBlankStream(): MediaStream {
@@ -209,6 +333,8 @@ function main(): void {
   const el = getEl();
   const prefs = loadPrefs();
   applyPrefsToUi(el, prefs);
+  // Make sure the hash is normalised on load so the share button always works.
+  savePrefs(prefs);
 
   const insecure =
     location.protocol !== 'https:' &&

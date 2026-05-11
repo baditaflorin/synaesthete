@@ -12,8 +12,8 @@
     <title>Synaesthete — sound becomes sight</title>
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <script type="module" crossorigin src="/synaesthete/assets/index.zNcAjisY.js"></script>
-    <link rel="stylesheet" crossorigin href="/synaesthete/assets/index.BpYd05r2.css">
+    <script type="module" crossorigin src="/synaesthete/assets/index.BD5ObPYH.js"></script>
+    <link rel="stylesheet" crossorigin href="/synaesthete/assets/index.DEOi-3Fh.css">
   </head>
   <body>
     <main id="app">
@@ -58,6 +58,19 @@
             Mirror
             <input id="mirror" type="checkbox" checked />
           </label>
+          <button id="record-btn" type="button" class="record" aria-pressed="false">
+            <span class="dot" aria-hidden="true"></span>
+            <span class="label">Record</span>
+            <kbd>R</kbd>
+          </button>
+          <button
+            id="share-btn"
+            type="button"
+            class="ghost"
+            title="Copy a link with these settings"
+          >
+            Copy share link
+          </button>
         </section>
         <footer class="hud-foot">
           <span id="fps">0 fps</span>

@@ -26,6 +26,24 @@ transformation:
 Pick from five effect modes (Prism, Ripple, Bloom, Kaleidoscope, Combined) in
 the HUD; tweak sensitivity and mirror.
 
+### Capture & share
+
+- **Record** writes the live canvas + microphone to a WebM file the browser
+  downloads when you stop. Codec is auto-picked (VP9+Opus where available).
+- **Copy share link** writes the current settings into the URL hash and copies
+  it; opening that URL on another device starts with the same effect, sensitivity,
+  and mirror state.
+
+### Keyboard shortcuts
+
+| Key     | Action                                              |
+| ------- | --------------------------------------------------- |
+| `1`–`5` | Effect: Prism / Ripple / Bloom / Kaleido / Combined |
+| `H`     | Show/hide the HUD                                   |
+| `M`     | Toggle mirror                                       |
+| `R`     | Start/stop recording                                |
+| `?`     | Print the shortcut hint                             |
+
 ## Quickstart
 
 ```bash
