@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="color-scheme" content="dark" />
+    <meta
+      name="description"
+      content="Live microphone audio transforms your camera feed through responsive WebGPU visual effects."
+    />
+    <title>Synaesthete — sound becomes sight</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <script type="module" crossorigin src="/synaesthete/assets/index.zNcAjisY.js"></script>
+    <link rel="stylesheet" crossorigin href="/synaesthete/assets/index.BpYd05r2.css">
+  </head>
+  <body>
+    <main id="app">
+      <canvas id="stage" aria-label="Audio-reactive camera output"></canvas>
+      <div id="permission-overlay" class="overlay" hidden>
+        <div class="overlay-card" role="dialog" aria-labelledby="overlay-title">
+          <h1 id="overlay-title">Synaesthete</h1>
+          <p>The world becomes responsive to its own sounds.</p>
+          <p class="muted">
+            We need access to your camera and microphone. Audio is analysed locally — nothing leaves
+            this tab.
+          </p>
+          <button id="start-btn" type="button">Begin</button>
+          <p class="hint" id="overlay-hint" aria-live="polite"></p>
+        </div>
+      </div>
+      <aside id="hud" class="hud" hidden>
+        <header class="hud-row">
+          <strong>synaesthete</strong>
+          <span id="renderer-badge" class="badge">—</span>
+          <button id="hud-toggle" type="button" aria-expanded="true" title="Hide controls">
+            −
+          </button>
+        </header>
+        <section class="meters" id="meters" aria-label="Audio meters"></section>
+        <section class="controls">
+          <label>
+            Effect
+            <select id="effect-select">
+              <option value="prism">Prism (color shift)</option>
+              <option value="ripple">Ripple (onset waves)</option>
+              <option value="bloom">Bloom (laughter glow)</option>
+              <option value="kaleido">Kaleidoscope</option>
+              <option value="combo" selected>Combined</option>
+            </select>
+          </label>
+          <label>
+            Sensitivity
+            <input id="sensitivity" type="range" min="0.2" max="3" step="0.05" value="1" />
+          </label>
+          <label>
+            Mirror
+            <input id="mirror" type="checkbox" checked />
+          </label>
+        </section>
+        <footer class="hud-foot">
+          <span id="fps">0 fps</span>
+          <span id="hint" class="muted"></span>
+        </footer>
+      </aside>
+    </main>
+  </body>
+</html>

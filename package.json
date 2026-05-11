@@ -1,0 +1,32 @@
+{
+  "name": "synaesthete",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Live microphone audio transforms your camera feed through responsive WebGPU visual effects.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4173 --outDir docs --base /synaesthete/",
+    "fmt": "prettier --write \"src/**/*.{ts,tsx,css,html}\" \"index.html\" \"*.{json,md}\"",
+    "fmt:check": "prettier --check \"src/**/*.{ts,tsx,css,html}\" \"index.html\" \"*.{json,md}\"",
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "smoke": "node scripts/smoke.mjs",
+    "prepare": "husky || true"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.2",
+    "@types/node": "^22.10.0",
+    "@typescript-eslint/eslint-plugin": "^8.16.0",
+    "@typescript-eslint/parser": "^8.16.0",
+    "@webgpu/types": "^0.1.52",
+    "eslint": "^9.16.0",
+    "husky": "^9.1.7",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.3",
+    "vitest": "^2.1.8"
+  }
+}

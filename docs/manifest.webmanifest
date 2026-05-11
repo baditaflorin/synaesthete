@@ -1,0 +1,19 @@
+{
+  "name": "Synaesthete",
+  "short_name": "Synaesthete",
+  "description": "Live mic audio bends your camera feed in real time.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
